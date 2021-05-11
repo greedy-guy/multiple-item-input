@@ -1,7 +1,7 @@
 <template>
-    <div tabindex="-1" class="mail-wrapper" @keyup="handleWrapperKeyup" @click="handleWrapperClick">
+    <div ref="multiInput" tabindex="-1" class="mail-wrapper" @keyup="handleWrapperKeyup" @click="handleWrapperClick" :style="{width: width, height: height}">
         <template v-for="(item, index) in arr">
-            <div v-clickoutside="handleClickOutside.bind(this, item)" v-if="item.type === 'block'" :key="item.value" class="mail-block" :class="{selected: item.selected, error: item.error}" @click.stop="handleClick(item)" @dblclick="blockDbClick(index)">{{item.value}}</div>
+            <div :ref="item.value + index" v-clickoutside="handleClickOutside.bind(this, item)" v-if="item.type === 'block'" :key="item.value + index" class="mail-block" :class="{selected: item.selected, error: item.error}" @click.stop="handleClick(item)" @dblclick="blockDbClick(index)">{{item.value}}</div>
             <div :key="item.type + id" v-else class="mail-text"> <!-- 输入框的key为input 这样可以复用输入框dom,同一时间该组件内只会存在一个input输入框 -->
                 <input ref="mailInput" v-model="inputValue" type="text" @keyup="handleKeyup" @blur="handleBlur">
                 <span>{{inputValue}}WW</span>
@@ -11,10 +11,18 @@
 </template>
 
 <script>
-import Clickoutside from './clickoutside';
+import Clickoutside from 'iview/src/directives/clickoutside';
     export default {
         directives: { Clickoutside },
         props: {
+            width: {
+                type: String,
+                default: '400px',
+            },
+            height: {
+                type: String,
+                default: '64px', 
+            },
             separator: {
                 type: String,
                 default: ';',
@@ -54,7 +62,31 @@ import Clickoutside from './clickoutside';
             this.$forceUpdate();
         },
         methods: {
-            handleWrapperClick () {
+            handleWrapperClick (e) {
+                console.log(e.clientX, e.clientY)
+                if (e.target !== this.$refs.multiInput){
+                    return;
+                }
+                
+
+                let inputIndex = this.arr.findIndex(el => el.type === 'input');
+                let inputItem = this.arr.splice(inputIndex, 1)[0];
+                this.inputValue = '';
+                let insertIndex = this.arr.length; //如果没有在下面那个循环内对insertIndex赋值，说明没有找到合适的插入位置，那么默认就往末尾插入
+                for(let i = 0, len = this.arr.length; i < len; i ++) {
+                    let item = this.arr[i];
+                    if (item.type === 'block') {
+                        let {left, bottom} = this.$refs[item.value + i][0].getBoundingClientRect();
+                        console.log(left, bottom)
+                        if (e.clientX < left && e.clientY < bottom) {
+                            insertIndex = i;
+                            break;
+                        }
+                    }
+                }
+
+                
+                this.arr.splice(insertIndex, 0, inputItem);
                 this.focusInput();
             },
             handleWrapperKeyup (e) {
@@ -138,10 +170,13 @@ import Clickoutside from './clickoutside';
                            this.arr[inputIndex - 1].selected = true;
                             this.$nextTick(() => { // 需要放在nextTick里去focus，不然focus了，vue更新后又失焦了
                                 this.$refs.mailInput[0].blur();
+                                this.$refs.multiInput.focus();
                             }); 
                             this.$forceUpdate();
                        }
                    } 
+                   e.stopPropagation(); // 不让事件冒泡，否则multiInput div也会监听到，然后把邮件块删掉一个。
+                   
                 }
                 if (e.key === 'ArrowLeft') {
                     if (!this.inputValue) { //输入框的值为空 并且输入框不在第一项

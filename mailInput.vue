@@ -1,5 +1,6 @@
 <template>
     <div ref="multiInput" tabindex="-1" class="mail-wrapper" @keyup="handleWrapperKeyup" @click="handleWrapperClick" :style="{width: width, height: height}">
+        <span v-show="isEmpty" class="placeholder">{{placeholder}}</span>
         <template v-for="(item, index) in arr">
             <div :ref="item.value + index" v-clickoutside="handleClickOutside.bind(this, item)" v-if="item.type === 'block'" :key="item.value + index" class="mail-block" :class="{selected: item.selected, error: item.error}" @click.stop="handleClick(item)" @dblclick="blockDbClick(index)">{{item.value}}</div>
             <div :key="item.type + id" v-else class="mail-text"> <!-- 输入框的key为input 这样可以复用输入框dom,同一时间该组件内只会存在一个input输入框 -->
@@ -15,6 +16,10 @@ import Clickoutside from 'iview/src/directives/clickoutside';
     export default {
         directives: { Clickoutside },
         props: {
+            placeholder: {
+                type: String,
+                default: '',
+            },
             width: {
                 type: String,
                 default: '400px',
@@ -51,6 +56,11 @@ import Clickoutside from 'iview/src/directives/clickoutside';
                 inputValue:'',
             }
         },
+        computed: {
+            isEmpty () {
+                return this.arr.length === 1 && this.inputValue.length === 0 ;
+            }
+        },
         mounted () {
             this.arr.forEach(el => {
                 if (this.rule(el.value)) {
@@ -84,7 +94,6 @@ import Clickoutside from 'iview/src/directives/clickoutside';
                         }
                     }
                 }
-
                 
                 this.arr.splice(insertIndex, 0, inputItem);
                 this.focusInput();
@@ -212,7 +221,14 @@ import Clickoutside from 'iview/src/directives/clickoutside';
     border: 1px solid rgba(224, 227, 230, 1);
     background: #fff;
     overflow: hidden;
-    padding: 4px;
+    padding: 2px 6px 6px;
+    position: relative;
+    .placeholder {
+        color: #B9BAC1;
+        position: absolute;
+        left: 8px;
+        top: 8px;
+    }
     .mail-block {
         cursor: pointer;
         &.error {
@@ -229,6 +245,7 @@ import Clickoutside from 'iview/src/directives/clickoutside';
         line-height: 24px;
         background-color: rgba(118, 119, 124, 0.1);
         margin-right: 4px;
+        margin-top: 4px;
         padding: 0 4px;
     }
     .mail-text {
